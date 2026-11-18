@@ -1,0 +1,121 @@
+asyncapi: 2.6.0
+info:
+  title: Powerbank IoT Station Broker API
+  version: 1.0.0
+  description: Асинхронный протокол обмена командами и событиями между бэкендом и станциями через RabbitMQ.
+
+servers:
+  production:
+    url: amqp://rabbitmq.sharing.local:5672
+    protocol: amqp
+
+channels:
+  station.{station_id}.commands:
+    parameters:
+      station_id:
+        description: Уникальный идентификатор станции
+        schema:
+          type: string
+    publish:
+      summary: Команды от бэкенда к конкретной станции
+      message:
+        $ref: '#/components/messages/UnlockSlotCommand'
+
+  station.events:
+    subscribe:
+      summary: События телеметрии и статусов от всех станций
+      message:
+        oneOf:
+          - $ref: '#/components/messages/SlotUnlockedEvent'
+          - $ref: '#/components/messages/SlotUnlockFailedEvent'
+          - $ref: '#/components/messages/PowerbankReturnedEvent'
+
+components:
+  messages:
+    UnlockSlotCommand:
+      name: UnlockSlotCommand
+      payload:
+        type: object
+        required: [message_id, correlation_id, command, slot_number, timestamp]
+        properties:
+          message_id:
+            type: string
+            format: uuid
+          correlation_id:
+            type: string
+            format: uuid
+            description: ID сессии аренды (rental_id)
+          command:
+            type: string
+            enum: [UNLOCK_SLOT]
+          slot_number:
+            type: integer
+          timestamp:
+            type: string
+            format: date-time
+
+    SlotUnlockedEvent:
+      name: SlotUnlockedEvent
+      payload:
+        type: object
+        required: [event_type, station_id, slot_number, correlation_id, powerbank_serial, timestamp]
+        properties:
+          event_type:
+            type: string
+            enum: [SlotUnlocked]
+          station_id:
+            type: string
+          slot_number:
+            type: integer
+          correlation_id:
+            type: string
+            format: uuid
+          powerbank_serial:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+
+    SlotUnlockFailedEvent:
+      name: SlotUnlockFailedEvent
+      payload:
+        type: object
+        required: [event_type, station_id, slot_number, correlation_id, reason, timestamp]
+        properties:
+          event_type:
+            type: string
+            enum: [SlotUnlockFailed]
+          station_id:
+            type: string
+          slot_number:
+            type: integer
+          correlation_id:
+            type: string
+            format: uuid
+          reason:
+            type: string
+            enum: [MECHANICAL_JAM, SLOT_EMPTY, HARDWARE_TIMEOUT]
+          timestamp:
+            type: string
+            format: date-time
+
+    PowerbankReturnedEvent:
+      name: PowerbankReturnedEvent
+      payload:
+        type: object
+        required: [event_type, station_id, slot_number, powerbank_serial, charge_level, timestamp]
+        properties:
+          event_type:
+            type: string
+            enum: [PowerbankReturned]
+          station_id:
+            type: string
+          slot_number:
+            type: integer
+          powerbank_serial:
+            type: string
+          charge_level:
+            type: integer
+          timestamp:
+            type: string
+            format: date-time
