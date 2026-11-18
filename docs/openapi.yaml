@@ -1,1 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Powerbank Sharing Mobile API
+  version: 1.0.0
+  description: REST API для мобильного приложения сервиса аренды пауэрбанков.
+
+paths:
+  /api/v1/stations:
+    get:
+      summary: Получить список станций на карте
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Список ближайших станций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Station'
+
+  /api/v1/rentals:
+    post:
+      summary: Инициировать аренду пауэрбанка
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [station_id]
+              properties:
+                station_id:
+                  type: string
+                  format: uuid
+      responses:
+        '202':
+          description: Запрос принят, команда отправлена на станцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rental'
+        '402':
+          description: Ошибка холдирования средств
+        '409':
+          description: На станции нет заряженных пауэрбанков
+
+  /api/v1/rentals/{rental_id}:
+    get:
+      summary: Получить актуальный статус аренды
+      parameters:
+        - name: rental_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Детали сессии аренды
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Rental'
+
+components:
+  schemas:
+    Station:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [online, offline, maintenance]
+        available_powerbanks:
+          type: integer
+        empty_slots:
+          type: integer
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    Rental:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending_unlock, active, completed, failed, overdue]
+        slot_number:
+          type: integer
+          nullable: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_amount:
+          type: number
+          format: float
 
